@@ -1,0 +1,56 @@
+// workflow graph (unlike the official AWS step function, in thsi work each node has a clear schema)
+
+trait Workflow{
+    // `name` should be unique
+    fn add_node(&mut self, name: &str,
+        required_inputs: &[str],
+    // [(k (can also be dynamic),condition: whether k exists, v: dynamic)]
+        output_schema: OutputSchema,
+    );
+    
+    fn add_edge(&mut self, src: &str, dst: &str, additional_transition_condition: &[InputCond]); // &[InputCond] is conjunction
+    // condition is tested for every input, and any input key-value pair that satisfies the condition will make the edge exists
+    
+    fn set_start_node(&mut self, node: &str);
+    
+    
+    fn is_reachable(&self, node: &str) -> bool;
+    
+    fn is_eventually_reached(&self, target_nodes: &[&str]) -> bool;
+    
+    // return None is is_eventually_reached(target_nodes) == false
+    fn minimum_input_set(&self, target_nodes: &[&str]) -> Option<Vec<String>>; 
+}
+
+enum InputCond{ // match input
+    Always,
+    MatchesKey(key:&str),
+    MatchesValue(value),
+    Or(&[InputCond])
+}
+
+enum KeyRule{
+    Any,
+    Never,
+    Identity,
+    Fixed(&str),
+    IdWithPrefix(&str), // if prefix is "output." k -> output.k
+}
+
+trait OutputSchema {
+    fn add_fixed(&mut self, key: &str);
+    
+    /*
+    for k,v in input:
+        if cond(k, v):
+            add key(k) to possible output
+    
+    example: carry
+    cond= Always
+    key=Identity
+    */
+    fn add_rule_for_every_input(&mut self, key: KeyRule, cond: InputCond);
+    fn carry_all(&mut self) {
+        self.add_rule_for_every_input(Identity, Always)
+    }
+}
