@@ -65,5 +65,12 @@ def main():
     check_stock_price_workflow(verifier)
     verifier.print_graph()
 
+    # some sanity check
+    match verifier.nodes["buy"][1].dynamic_keys[0][0]:
+        case IdWithPrefix(prefix):
+            pass
+        case _:
+            raise Exception("unexpected")
+
 if __name__ == "__main__":
     main()

@@ -22,6 +22,7 @@ class MatchesValue:
 
 @add_repr
 class Or:
+    __match_args__ = ("conds",)
     def __init__(self, conds: list['InputCond']):
         self.conds = conds
 
@@ -39,11 +40,13 @@ class Identity:
     pass
 @add_repr
 class Fixed:
+    __match_args__ = ("key",)
     def __init__(self, key: str):
         self.key = key
 
 @add_repr
 class IdWithPrefix:
+    __match_args__ = ("prefix",)
     def __init__(self, prefix: str):
         self.prefix = prefix
 
