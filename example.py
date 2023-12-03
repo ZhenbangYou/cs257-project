@@ -1,4 +1,12 @@
-from workflow import Always, IdWithPrefix, WorkflowVerifier, DummyVerifier, OutputSchema, MatchesKey, MatchesValue
+from workflow import (
+    Always,
+    IdWithPrefix,
+    WorkflowVerifier,
+    DummyVerifier,
+    OutputSchema,
+    MatchesKey,
+    MatchesValue,
+)
 
 """
 - Check Stock Price
@@ -27,25 +35,35 @@ from workflow import Always, IdWithPrefix, WorkflowVerifier, DummyVerifier, Outp
         - `add_rule_for_every_input(IdWithPrefix("previous_input"), Always)`
 """
 
+
 def check_stock_price_workflow(verifier: WorkflowVerifier):
-    verifier.add_node("check_stock_price", [], OutputSchema()
-                      .add_fixed("stock_price")
-                      .carry_all())
-    verifier.add_node("buy_sell_rec", ["stock_price"], OutputSchema()
-                      .add_fixed("rec")
-                      .carry_all())
-    verifier.add_node("buy_or_sell", ["rec"], OutputSchema()
-                        .carry_all())
-    verifier.add_node("buy", ["stock_name", "stock_price"], OutputSchema()
-                      .add_fixed("quantity")
-                        .add_rule_for_every_input(IdWithPrefix("previous_input."), Always()))
-    verifier.add_node("sell", ["stock_name"], OutputSchema()
-                      .add_fixed("quantity")
-                      .add_rule_for_every_input(IdWithPrefix("previous_input."), Always()))
-    verifier.add_node("report_result", ["previous_input.stock_name",
-                                         "previous_input.rec", "quantity"], OutputSchema()
-                        .carry_all())
-    
+    verifier.add_node(
+        "check_stock_price", [], OutputSchema().add_fixed("stock_price").carry_all()
+    )
+    verifier.add_node(
+        "buy_sell_rec", ["stock_price"], OutputSchema().add_fixed("rec").carry_all()
+    )
+    verifier.add_node("buy_or_sell", ["rec"], OutputSchema().carry_all())
+    verifier.add_node(
+        "buy",
+        ["stock_name", "stock_price"],
+        OutputSchema()
+        .add_fixed("quantity")
+        .add_rule_for_every_input(IdWithPrefix("previous_input."), Always()),
+    )
+    verifier.add_node(
+        "sell",
+        ["stock_name"],
+        OutputSchema()
+        .add_fixed("quantity")
+        .add_rule_for_every_input(IdWithPrefix("previous_input."), Always()),
+    )
+    verifier.add_node(
+        "report_result",
+        ["previous_input.stock_name", "previous_input.rec", "quantity"],
+        OutputSchema().carry_all(),
+    )
+
     verifier.add_edge("check_stock_price", "buy_sell_rec", [])
     verifier.add_edge("buy_sell_rec", "buy_or_sell", [])
 
@@ -71,6 +89,7 @@ def main():
             pass
         case _:
             raise Exception("unexpected")
+
 
 if __name__ == "__main__":
     main()
