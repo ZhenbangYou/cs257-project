@@ -17,12 +17,16 @@ class Always:
 
 @add_repr
 class MatchesKey:
+    __match_args__ = ("key",)
+
     def __init__(self, key: str):
         self.key = key
 
 
 @add_repr
 class MatchesValue:
+    __match_args__ = ("value",)
+
     def __init__(self, value):
         self.value = value
 
