@@ -3,7 +3,6 @@ use std::collections::BTreeSet;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyRule {
     Any,
-    Never,
     Identity,
     Fixed(String),
     IdWithPrefix(String),
