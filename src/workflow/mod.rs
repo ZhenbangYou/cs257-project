@@ -54,11 +54,10 @@ impl WorkflowGraph {
         self.adj_list.push(Vec::new());
         self.nodes.len() - 1
     }
-    /**
-    Add an edge from `src` to `dst` with additional transition condition.
-     A transition is good if and only if required_inputs are satisfied and:
-     * for each `InputCond`, exists a (key, value) pair in outputs of `src` that satisfies the condition
-     */
+
+    /// Add an edge from `src` to `dst` with additional transition condition.
+    ///  A transition is good if and only if required_inputs are satisfied and:
+    ///  * for each `InputCond`, exists a (key, value) pair in outputs of `src` that satisfies the condition
     pub fn add_edge(
         &mut self,
         src: NodeId,
