@@ -25,8 +25,11 @@ impl GraphVerifier {
         //  for each input in required_inputs of dst
         //    for each IdWithPrefix(prefix) key rule in output_schema of src
         //      add prefix + input to literals
-        // TODO: need to include more literals
-        // for each node, do inverse BFS to find all possible prefixes
+        // TODO: this is not correct, probably correct solution:
+        // for each node in reverse topological order:
+        //   for each IdWithPrefix(prefix) key rule in output_schema of node:
+        //      for each lit in literals:
+        //         add prefix + lit to literals
         for (src, dsts) in graph.adj_list.iter().enumerate() {
             let required_inputs_union = dsts
                 .iter()
