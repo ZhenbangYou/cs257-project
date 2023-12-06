@@ -8,9 +8,9 @@ pub type NodeId = usize;
 
 #[derive(Debug)]
 pub struct Node {
-    name: String,
-    required_inputs: Vec<String>,
-    output_schema: schema::OutputSchema,
+    pub name: String,
+    pub required_inputs: Vec<String>,
+    pub output_schema: schema::OutputSchema,
 }
 
 impl Node {
@@ -29,9 +29,9 @@ impl Node {
 
 #[derive(Debug)]
 pub struct WorkflowGraph {
-    nodes: Vec<Node>,
-    adj_list: Vec<Vec<(NodeId, Vec<InputCond>)>>,
-    start: Option<NodeId>,
+    pub nodes: Vec<Node>,
+    pub adj_list: Vec<Vec<(NodeId, Vec<InputCond>)>>,
+    pub start: Option<NodeId>,
 }
 
 impl WorkflowGraph {

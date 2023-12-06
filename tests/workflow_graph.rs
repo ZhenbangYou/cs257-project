@@ -75,5 +75,12 @@ fn make_graph() -> WorkflowGraph {
 #[test]
 fn construct_graph_without_panic() {
     let g = make_graph();
-    println!("{:#?}", g);
+    println!("Nodes: {:#?}", g.nodes);
+    println!("Edges: ");
+    g.adj_list.iter().enumerate().for_each(|(i, adj)| {
+        adj.iter().for_each(|(j, cond)| {
+            println!("{} -> {} with {:?}", &g[i].name, &g[*j].name, cond);
+        });
+    });
+    println!("Start: {:?}", g[g.start.unwrap()].name);
 }
