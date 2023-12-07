@@ -2,7 +2,6 @@ use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeyRule {
-    Any,
     Identity,
     Fixed(String),
     IdWithPrefix(String),
@@ -28,8 +27,8 @@ impl InputCond {
 
 #[derive(Debug)]
 pub struct OutputSchema {
-    fixed_keys: Vec<String>,
-    dynamic_keys: Vec<(KeyRule, InputCond)>,
+    pub fixed_keys: Vec<String>,
+    pub dynamic_keys: Vec<(KeyRule, InputCond)>,
 }
 
 pub struct OutputSchemaBuilder {

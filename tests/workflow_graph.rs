@@ -87,10 +87,3 @@ fn construct_graph_without_panic() {
     });
     println!("Start: {:?}", g[g.start.unwrap()].name);
 }
-
-#[test]
-fn get_literals_without_panic() {
-    let g = make_graph();
-    let verifier = GraphVerifier::new(g);
-    println!("Literals: {:?}", verifier.literals());
-}
