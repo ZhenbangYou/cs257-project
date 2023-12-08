@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use cs257_project::{
-    verifier::{ast::NodeAST, topsort::topological_sort_reversed, GraphVerifier},
+    verifier::{
+        ast::NodeAST, symbol::get_symbol_count, topsort::topological_sort_reversed, GraphVerifier,
+    },
     workflow::{
         schema::{InputCond, KeyRule, OutputSchema},
         WorkflowGraph,
@@ -103,24 +105,25 @@ fn find_literals_without_panic() {
     let order = topological_sort_reversed(&g);
     let ctx = Context::new(&Config::default());
     let mut asts = HashMap::new();
-    for i in order {
+    let mut symbol_counts = (0..g.nodes.len()).map(|_| 0).collect::<Vec<_>>();
+    for i in order.iter().copied() {
         let children_ast = g.adj_list[i]
             .iter()
             .map(|(j, _)| asts.get(j).unwrap())
             .collect::<Vec<_>>();
+        let cnt0 = get_symbol_count();
         let ast = NodeAST::new(&ctx, &g[i], &g, &children_ast);
+        let cnt1 = get_symbol_count();
         asts.insert(i, ast);
+        symbol_counts[i] = cnt1 - cnt0;
     }
-    for ast in asts.values() {
+    for ast in order.iter().rev().map(|i| asts.get(i).unwrap()) {
         println!("name: {}", ast.node.name);
         println!("required_input: {:?}", ast.node.required_inputs);
         println!("output_schema: {:?}", ast.node.output_schema);
         println!("relevant input_keys: {:?}", ast.input_keys.keys());
         println!("relevant output_keys: {:?}", ast.output_keys.keys());
-        println!(
-            "number of schema constraints: {}",
-            ast.schema_constraints.len()
-        );
+        println!("Added symbols: {}", symbol_counts[ast.node.id]);
         println!()
     }
 }

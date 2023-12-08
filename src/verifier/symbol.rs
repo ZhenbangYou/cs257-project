@@ -37,6 +37,11 @@ pub fn get_reason(sym: &Symbol) -> (&'static str, u32, Option<String>) {
     factory.trace.get(idx).unwrap().clone()
 }
 
+pub fn get_symbol_count() -> usize {
+    let factory = SYMBOL_FACTORY.lock().unwrap();
+    factory.ctr
+}
+
 macro_rules! symbol {
     ($comment:expr) => {{
         let mut factory = crate::verifier::symbol::SYMBOL_FACTORY.lock().unwrap();
