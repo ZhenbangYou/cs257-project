@@ -2,9 +2,9 @@ use crate::workflow::WorkflowGraph;
 
 use self::ast::NodeAST;
 
-mod ast;
-mod symbol;
-mod topsort;
+pub mod ast;
+pub mod symbol;
+pub mod topsort;
 
 pub struct GraphVerifier<'ctx, 'g> {
     graph: &'g WorkflowGraph,

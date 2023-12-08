@@ -11,18 +11,7 @@ pub enum KeyRule {
 pub enum InputCond {
     Always,
     MatchesKey(String),
-    MatchesValue(String),
-    Or(Vec<InputCond>),
-    And(Vec<InputCond>),
-}
-
-impl InputCond {
-    pub fn matches_key_value<T: Into<String>>(key: T, value: T) -> Self {
-        InputCond::And(vec![
-            InputCond::MatchesKey(key.into()),
-            InputCond::MatchesValue(value.into()),
-        ])
-    }
+    MatchesKeyValue(String, String),
 }
 
 #[derive(Debug)]

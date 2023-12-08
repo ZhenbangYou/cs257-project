@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use z3::ast::Ast;
 use z3::{ast::Bool, Context};
 
 use crate::workflow::{Node, WorkflowGraph};
 
 use crate::verifier::symbol::symbol;
-use crate::workflow::schema::KeyRule;
+use crate::workflow::schema::{InputCond, KeyRule};
 
 pub struct NodeAST<'ctx, 'g> {
     pub ctx: &'ctx Context,
@@ -55,7 +56,100 @@ impl<'ctx, 'g> NodeAST<'ctx, 'g> {
             })
             .collect();
 
-        // TODO: add transition constraints
+        // add schema constraints.
+        let mut disjuncts = output_keys
+            .keys()
+            .map(|s| (*s, Vec::new()))
+            .collect::<HashMap<_, _>>();
+        // disjuncts[s] is a list of booleans such that if output[s] is true,
+        // then at least one of the booleans in disjuncts[s] must be true
+        node.output_schema.fixed_keys().for_each(|s| {
+            if let Some(v) = disjuncts.get_mut(s) {
+                v.push(Bool::from_bool(ctx, true));
+            }
+        });
+        output_keys.keys().for_each(|s| {
+            node.output_schema
+                .dynamic_keys
+                .iter()
+                .for_each(|(rule, cond)| {
+                    let constraint = match rule {
+                        KeyRule::Identity => match cond {
+                            InputCond::Always => Some(
+                                input_keys
+                                    .entry(s)
+                                    .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                    .clone(),
+                            ),
+                            InputCond::MatchesKey(ss) if ss == s => Some(
+                                input_keys
+                                    .entry(s)
+                                    .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                    .clone(),
+                            ),
+                            _ => None,
+                        },
+                        KeyRule::Fixed(ss) if ss == s => match cond {
+                            InputCond::Always => Some(Bool::from_bool(ctx, true)),
+                            InputCond::MatchesKey(s_input) => Some(
+                                input_keys
+                                    .entry(s_input)
+                                    .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                    .clone(),
+                            ),
+                            InputCond::MatchesKeyValue(s_input, _) => Some(
+                                input_keys
+                                    .entry(s_input)
+                                    .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                    .clone(),
+                                // TODO: value is ignored for now
+                            ),
+                        },
+                        KeyRule::IdWithPrefix(prefix) if s.starts_with(prefix) => {
+                            let expected_input = s.strip_prefix(prefix).unwrap();
+                            match cond {
+                                InputCond::Always => Some(
+                                    input_keys
+                                        .entry(expected_input)
+                                        .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                        .clone(),
+                                ),
+                                InputCond::MatchesKey(s_input) if s_input == expected_input => {
+                                    Some(
+                                        input_keys
+                                            .entry(s_input)
+                                            .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                            .clone(),
+                                    )
+                                }
+                                InputCond::MatchesKeyValue(s_input, _)
+                                    if s_input == expected_input =>
+                                {
+                                    Some(
+                                        input_keys
+                                            .entry(s_input)
+                                            .or_insert_with(|| Bool::new_const(ctx, symbol!()))
+                                            .clone(),
+                                    )
+                                } // TODO: value is ignored for now
+                                _ => None,
+                            }
+                        }
+                        _ => None,
+                    };
+                    if let Some(c) = constraint {
+                        disjuncts.get_mut(s).unwrap().push(c);
+                    }
+                })
+        });
+
+        for (s, v) in disjuncts {
+            let or = match v.len() {
+                0 => Bool::from_bool(ctx, false),
+                _ => Bool::or(ctx, &(v.iter().collect::<Vec<_>>())),
+            };
+            schema_constraints.push(output_keys[s]._eq(&or)); // TODO: check whether use implication or equivalence
+        }
 
         Self {
             ctx,

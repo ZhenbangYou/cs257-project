@@ -1,10 +1,13 @@
+use std::collections::HashMap;
+
 use cs257_project::{
-    verifier::GraphVerifier,
+    verifier::{ast::NodeAST, topsort::topological_sort_reversed, GraphVerifier},
     workflow::{
         schema::{InputCond, KeyRule, OutputSchema},
         WorkflowGraph,
     },
 };
+use z3::{Config, Context};
 
 fn make_graph() -> WorkflowGraph {
     let mut g = WorkflowGraph::new();
@@ -62,12 +65,18 @@ fn make_graph() -> WorkflowGraph {
         .add_edge(
             buy_or_sell,
             buy,
-            vec![InputCond::matches_key_value("rec", "buy")],
+            vec![InputCond::MatchesKeyValue(
+                "rec".to_string(),
+                "buy".to_string(),
+            )],
         )
         .add_edge(
             buy_or_sell,
             sell,
-            vec![InputCond::matches_key_value("rec", "sell")],
+            vec![InputCond::MatchesKeyValue(
+                "rec".to_string(),
+                "sell".to_string(),
+            )],
         )
         .add_edge(buy, report_result, vec![])
         .add_edge(sell, report_result, vec![])
@@ -86,4 +95,32 @@ fn construct_graph_without_panic() {
         });
     });
     println!("Start: {:?}", g[g.start.unwrap()].name);
+}
+
+#[test]
+fn find_literals_without_panic() {
+    let g = make_graph();
+    let order = topological_sort_reversed(&g);
+    let ctx = Context::new(&Config::default());
+    let mut asts = HashMap::new();
+    for i in order {
+        let children_ast = g.adj_list[i]
+            .iter()
+            .map(|(j, _)| asts.get(j).unwrap())
+            .collect::<Vec<_>>();
+        let ast = NodeAST::new(&ctx, &g[i], &g, &children_ast);
+        asts.insert(i, ast);
+    }
+    for ast in asts.values() {
+        println!("name: {}", ast.node.name);
+        println!("required_input: {:?}", ast.node.required_inputs);
+        println!("output_schema: {:?}", ast.node.output_schema);
+        println!("relevant input_keys: {:?}", ast.input_keys.keys());
+        println!("relevant output_keys: {:?}", ast.output_keys.keys());
+        println!(
+            "number of schema constraints: {}",
+            ast.schema_constraints.len()
+        );
+        println!()
+    }
 }
