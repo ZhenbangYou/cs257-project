@@ -121,8 +121,8 @@ fn find_literals_without_panic() {
         println!("name: {}", ast.node.name);
         println!("required_input: {:?}", ast.node.required_inputs);
         println!("output_schema: {:?}", ast.node.output_schema);
-        println!("relevant input_keys: {:?}", ast.input_keys.keys());
-        println!("relevant output_keys: {:?}", ast.output_keys.keys());
+        println!("input variables: {:?}", ast.input_keys.keys());
+        println!("output variables: {:?}", ast.output_keys.keys());
         println!("Added symbols: {}", symbol_counts[ast.node.id]);
         println!()
     }
