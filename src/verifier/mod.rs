@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use z3::Context;
 
 use crate::workflow::{NodeIdx, WorkflowGraph};
@@ -23,7 +25,31 @@ pub struct ExecutionModel {
 impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
     pub fn new(graph: &'g WorkflowGraph, context: &'ctx Context) -> Self {
         // construct node_asts (tests/workflow_graph.rs)
-        todo!()
+        let mut node_idx_to_ast = HashMap::new();
+        topsort::topological_sort_reversed(graph)
+            .into_iter()
+            .for_each(|node_idx| {
+                let node_ast = NodeAST::new(
+                    context,
+                    &graph.nodes[node_idx],
+                    graph,
+                    &graph.adj_list[node_idx]
+                        .iter()
+                        .map(|(child_idx, _)| node_idx_to_ast.get(child_idx).unwrap())
+                        .collect::<Vec<_>>(),
+                );
+                node_idx_to_ast.insert(node_idx, node_ast);
+            });
+        let node_asts = graph
+            .nodes
+            .iter()
+            .map(|node| node_idx_to_ast.get(&node.id).unwrap().clone())
+            .collect::<Vec<_>>();
+        Self {
+            context,
+            graph,
+            node_asts,
+        }
     }
 
     pub fn is_reachable(&self, target_node: NodeIdx) -> Option<Vec<ExecutionModel>> {

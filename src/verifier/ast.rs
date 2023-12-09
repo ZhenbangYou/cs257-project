@@ -8,6 +8,7 @@ use crate::workflow::{Node, WorkflowGraph};
 use crate::verifier::symbol::symbol;
 use crate::workflow::schema::{InputCond, KeyRule};
 
+#[derive(Clone)]
 pub struct NodeAST<'ctx, 'g> {
     pub ctx: &'ctx Context,
     pub node: &'g Node,

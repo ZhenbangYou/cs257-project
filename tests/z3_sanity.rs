@@ -1,5 +1,5 @@
 use z3::{
-    ast::{self, Array, Ast, Int, Real},
+    ast::{self, Array, Ast, Int, Real, Set},
     Config, Context, FuncDecl, RecFuncDecl, SatResult, Solver, Sort,
 };
 
