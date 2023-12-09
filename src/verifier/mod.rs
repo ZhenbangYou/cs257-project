@@ -140,9 +140,11 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
                 .0, // incoming
         );
 
+        let res = solver.check();
+
         println!("{:?}", solver.get_model());
 
-        match solver.check() {
+        match res {
             SatResult::Sat => Some(vec![]),
             _ => None,
         }
