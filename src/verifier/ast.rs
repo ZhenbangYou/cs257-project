@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use z3::ast::{Ast, Int};
+use z3::ast::Ast;
 use z3::{ast::Bool, Context};
 
 use crate::workflow::{Node, WorkflowGraph};
@@ -8,7 +8,6 @@ use crate::workflow::{Node, WorkflowGraph};
 use crate::verifier::symbol::symbol;
 use crate::workflow::schema::{InputCond, KeyRule};
 
-#[derive(Clone)]
 pub struct NodeAST<'ctx, 'g> {
     pub ctx: &'ctx Context,
     pub node: &'g Node,
