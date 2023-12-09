@@ -123,6 +123,10 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
             .get_mut(&target_node)
             .unwrap()
             .1 = Bool::from_bool(self.context, true); // clear the outgoing constraint for target node
+        node_idx_to_transition_constraints
+            .get_mut(&self.graph.start.unwrap())
+            .unwrap()
+            .0 = Bool::from_bool(self.context, true);
         let transition_constraits_bools = node_idx_to_transition_constraints
             .iter()
             .map(|(_, (incoming, outgoing))| incoming.implies(outgoing))
