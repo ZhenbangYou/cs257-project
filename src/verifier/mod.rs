@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::RandomState, HashMap};
 
 use z3::{ast::Bool, Context, Solver};
 
@@ -43,7 +43,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         let node_asts = graph
             .nodes
             .iter()
-            .map(|node| node_idx_to_ast.get(&node.id).unwrap().clone())
+            .map(|node| node_idx_to_ast.remove(&node.id).unwrap())
             .collect();
         Self {
             context,
@@ -58,12 +58,53 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
     ) -> Bool<'ctx> {
         Bool::and(
             context,
-            &node_ast
-                .schema_constraints
-                .iter()
-                .map(|s| s)
-                .collect::<Vec<_>>(),
+            &node_ast.schema_constraints.iter().collect::<Vec<_>>(),
         )
+    }
+
+    fn get_in_out_transition_constraints(&self) -> HashMap<NodeIdx, Bool<'ctx>> {
+        // value: (incoming constraints, outgoing constraints)
+        let mut in_out_transition_constraints: HashMap<
+            usize,
+            (Vec<&Bool<'_>>, Vec<&Bool<'_>>),
+            RandomState,
+        > = HashMap::from_iter(
+            self.graph
+                .nodes
+                .iter()
+                .map(|node| (node.id, (vec![], vec![]))),
+        );
+
+        self.node_asts.iter().for_each(|node_ast| {
+            node_ast
+                .transition_constraints
+                .iter()
+                .enumerate()
+                .for_each(|(child_id, bool)| {
+                    // edge direction: node_ast.node.id -> child_id
+                    in_out_transition_constraints
+                        .get_mut(&child_id)
+                        .unwrap()
+                        .0 // incoming
+                        .push(bool);
+                    in_out_transition_constraints
+                        .get_mut(&node_ast.node.id)
+                        .unwrap()
+                        .1 // outgoing
+                        .push(bool);
+                })
+        });
+
+        let constraint_bools_iter =
+            in_out_transition_constraints
+                .iter()
+                .map(|(&node_idx, (incoming, outgoing))| {
+                    let incoming_constraint = Bool::or(self.context, &incoming);
+                    let outgoing_constraint = Bool::or(self.context, &outgoing);
+                    (node_idx, incoming_constraint.implies(&outgoing_constraint))
+                });
+
+        HashMap::from_iter(constraint_bools_iter)
     }
 
     pub fn is_reachable(&self, target_node: NodeIdx) -> Option<Vec<ExecutionModel>> {
@@ -72,6 +113,13 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         // enforce all schema constraints
         self.node_asts.iter().for_each(|node_ast| {
             solver.assert(&Self::aggregate_schema_constraints(node_ast, self.context))
+        });
+
+        // enforce all transition constraints
+        solver.assert({
+            let constraints = self.get_in_out_transition_constraints();
+            let bools = constraints.iter().map(|x| x.1).collect::<Vec<_>>();
+            &Bool::and(self.context, &bools)
         });
 
         println!("{:?}", solver.check());
