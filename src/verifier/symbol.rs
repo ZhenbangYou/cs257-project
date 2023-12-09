@@ -28,6 +28,7 @@ lazy_static! {
 }
 
 pub fn get_reason(sym: &Symbol) -> (&'static str, u32, Option<String>) {
+    // (filename, line, comment)
     let factory = SYMBOL_FACTORY.lock().unwrap();
     let idx = if let Symbol::Int(idx) = sym {
         *idx as usize

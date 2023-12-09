@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use z3::ast::Ast;
+use z3::ast::{Ast, Int};
 use z3::{ast::Bool, Context};
 
 use crate::workflow::{Node, WorkflowGraph};
@@ -49,7 +49,7 @@ impl<'ctx, 'g> NodeAST<'ctx, 'g> {
                         let b_out = output_keys
                             .entry(*s)
                             .or_insert_with(|| Bool::new_const(ctx, symbol!()));
-                        b_in.implies(b_out)
+                        b_in._eq(b_out) // TODO: check whether use eq or implies
                     })
                     .collect::<Vec<_>>();
                 Bool::and(ctx, &(implications.iter().collect::<Vec<_>>()))
