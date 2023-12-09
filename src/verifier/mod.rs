@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use z3::Context;
+use z3::{ast::Bool, Context, Solver};
 
-use crate::workflow::{NodeIdx, WorkflowGraph};
+use crate::workflow::{Node, NodeIdx, WorkflowGraph};
 
 use self::ast::NodeAST;
 
@@ -44,7 +44,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
             .nodes
             .iter()
             .map(|node| node_idx_to_ast.get(&node.id).unwrap().clone())
-            .collect::<Vec<_>>();
+            .collect();
         Self {
             context,
             graph,
@@ -52,7 +52,30 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         }
     }
 
+    fn aggregate_schema_constraints(
+        node_ast: &NodeAST<'ctx, '_>,
+        context: &'ctx Context,
+    ) -> Bool<'ctx> {
+        Bool::and(
+            context,
+            &node_ast
+                .schema_constraints
+                .iter()
+                .map(|s| s)
+                .collect::<Vec<_>>(),
+        )
+    }
+
     pub fn is_reachable(&self, target_node: NodeIdx) -> Option<Vec<ExecutionModel>> {
+        let solver = Solver::new(&self.context);
+
+        // enforce all schema constraints
+        self.node_asts.iter().for_each(|node_ast| {
+            solver.assert(&Self::aggregate_schema_constraints(node_ast, self.context))
+        });
+
+        println!("{:?}", solver.check());
+
         todo!()
     }
 
