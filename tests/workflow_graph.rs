@@ -127,3 +127,13 @@ fn find_literals_without_panic() {
         println!()
     }
 }
+
+#[test]
+fn test_reachable() {
+    let graph = make_graph();
+    let ctx = Context::new(&Config::default());
+    let graph_verifier = GraphVerifier::new(&graph, &ctx);
+    for i in 0..graph.nodes.len() {
+        println!("{}: {:?}", i, graph_verifier.is_reachable(i));
+    }
+}

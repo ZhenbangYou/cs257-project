@@ -16,6 +16,7 @@ pub struct GraphVerifier<'ctx, 'g> {
     pub node_asts: Vec<NodeAST<'ctx, 'g>>,
 }
 
+#[derive(Debug)]
 pub struct ExecutionModel {
     node_idx: NodeIdx,
     input_keys: Vec<String>,
@@ -135,7 +136,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
                 .0, // incoming
         );
 
-        println!("{:?}", solver.check());
+        println!("{:?}", solver.get_model());
 
         match solver.check() {
             SatResult::Sat => Some(vec![]),
