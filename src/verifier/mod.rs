@@ -1,6 +1,6 @@
 use std::collections::{hash_map::RandomState, HashMap};
 
-use z3::{ast::Bool, Context, Solver};
+use z3::{ast::Bool, Context, SatResult, Solver};
 
 use crate::workflow::{Node, NodeIdx, WorkflowGraph};
 
@@ -62,7 +62,8 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         )
     }
 
-    fn get_in_out_transition_constraints(&self) -> HashMap<NodeIdx, Bool<'ctx>> {
+    /// return value: Key: Node Index, Value: (incoming constraint bool, outgoing constraint bool)
+    fn get_in_out_transition_constraints(&self) -> HashMap<NodeIdx, (Bool<'ctx>, Bool<'ctx>)> {
         // value: (incoming constraints, outgoing constraints)
         let mut in_out_transition_constraints: HashMap<
             usize,
@@ -101,7 +102,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
                 .map(|(&node_idx, (incoming, outgoing))| {
                     let incoming_constraint = Bool::or(self.context, &incoming);
                     let outgoing_constraint = Bool::or(self.context, &outgoing);
-                    (node_idx, incoming_constraint.implies(&outgoing_constraint))
+                    (node_idx, (incoming_constraint, outgoing_constraint))
                 });
 
         HashMap::from_iter(constraint_bools_iter)
@@ -116,15 +117,30 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         });
 
         // enforce all transition constraints
-        solver.assert({
-            let constraints = self.get_in_out_transition_constraints();
-            let bools = constraints.iter().map(|x| x.1).collect::<Vec<_>>();
-            &Bool::and(self.context, &bools)
-        });
+        let mut node_idx_to_transition_constraints = self.get_in_out_transition_constraints();
+        node_idx_to_transition_constraints
+            .get_mut(&target_node)
+            .unwrap()
+            .1 = Bool::from_bool(self.context, true); // clear the outgoing constraint for target node
+        let transition_constraits_bools = node_idx_to_transition_constraints
+            .iter()
+            .map(|(_, (incoming, outgoing))| incoming.implies(outgoing))
+            .collect::<Vec<_>>();
+        let transition_constraits_bools = transition_constraits_bools.iter().collect::<Vec<_>>();
+        solver.assert(&Bool::and(self.context, &transition_constraits_bools));
+        solver.assert(
+            &node_idx_to_transition_constraints
+                .get(&target_node)
+                .unwrap()
+                .0, // incoming
+        );
 
         println!("{:?}", solver.check());
 
-        todo!()
+        match solver.check() {
+            SatResult::Sat => Some(vec![]),
+            _ => None,
+        }
     }
 
     /// Minimum user provided input to make `target_node` reachable.
