@@ -28,7 +28,7 @@ impl<'ctx, 'g> NodeAST<'ctx, 'g> {
         let mut input_keys = node
             .required_inputs
             .iter()
-            .map(|s| (s.as_str(), Bool::new_const(ctx, symbol!())))
+            .map(|s| (s.as_str(), Bool::from_bool(ctx, true)))
             .collect::<HashMap<_, _>>();
         let mut output_keys = HashMap::new();
 
@@ -58,6 +58,7 @@ impl<'ctx, 'g> NodeAST<'ctx, 'g> {
             .collect();
 
         // add schema constraints.
+
         let mut disjuncts = output_keys
             .keys()
             .map(|s| (*s, Vec::new()))
