@@ -186,3 +186,14 @@ fn test_can_eventually_reach() {
         println!("{}", result);
     }
 }
+
+#[test]
+fn test_minimum_input_set() {
+    let graph = make_graph();
+    for i in 0..graph.nodes.len() {
+        let ctx = Context::new(&Config::default());
+        let graph_verifier = GraphVerifier::new(&graph, &ctx);
+        let result = graph_verifier.minimum_input_set(i);
+        println!("{:?}", result);
+    }
+}

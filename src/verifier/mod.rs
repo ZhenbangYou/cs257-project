@@ -1,6 +1,9 @@
 use std::collections::{hash_map::RandomState, HashMap, HashSet, VecDeque};
 
-use z3::{ast::Bool, Context, Model, SatResult, Solver};
+use z3::{
+    ast::{Ast, Bool, Int},
+    Context, Model, SatResult, Solver,
+};
 
 use crate::workflow::{Node, NodeIdx, WorkflowGraph};
 
@@ -223,17 +226,93 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         }
     }
 
+    fn count_input_set(&self) -> Int<'ctx> {
+        let input_as_int = self.node_asts[self.graph.start.unwrap()]
+            .input_keys
+            .iter()
+            .map(|(_, v)| {
+                v.ite(
+                    &Int::from_i64(self.context, 1),
+                    &Int::from_i64(self.context, 0),
+                )
+            })
+            .collect::<Vec<_>>();
+        Int::add(self.context, &input_as_int.iter().collect::<Vec<_>>())
+    }
+
+    fn try_minimum_input_set(
+        &self,
+        target_node: NodeIdx,
+        input_set_size: usize,
+    ) -> Option<(Vec<String>, Vec<ExecutionModel>)> {
+        let solver = Solver::new(&self.context);
+
+        // enforce input set size
+        solver.assert(&self.count_input_set()._eq(&Int::from_i64(
+            self.context,
+            input_set_size.try_into().unwrap(),
+        )));
+
+        // enforce all schema constraints
+        self.node_asts.iter().for_each(|node_ast| {
+            solver.assert(&Self::aggregate_schema_constraints(node_ast, self.context))
+        });
+
+        // enforce all transition constraints
+        let mut node_idx_to_transition_constraints = self.get_in_out_transition_constraints();
+        node_idx_to_transition_constraints
+            .get_mut(&target_node)
+            .unwrap()
+            .1 = Bool::from_bool(self.context, true); // clear the outgoing constraint for target node
+        node_idx_to_transition_constraints
+            .get_mut(&self.graph.start.unwrap())
+            .unwrap()
+            .0 = Bool::from_bool(self.context, true);
+        let transition_constraits_bools = node_idx_to_transition_constraints
+            .iter()
+            .map(|(_, (incoming, outgoing))| incoming.implies(outgoing))
+            .collect::<Vec<_>>();
+        let transition_constraits_bools = transition_constraits_bools.iter().collect::<Vec<_>>();
+        solver.assert(&Bool::and(self.context, &transition_constraits_bools));
+        solver.assert(
+            &node_idx_to_transition_constraints
+                .get(&target_node)
+                .unwrap()
+                .0, // incoming
+        );
+
+        match solver.check() {
+            SatResult::Sat => Some((vec![], vec![])),
+            SatResult::Unsat => None,
+            SatResult::Unknown => panic!("unknown!"),
+        }
+    }
+
     /// Minimum user provided input to make `target_node` reachable.
     pub fn minimum_input_set(
         &self,
         target_node: NodeIdx,
-    ) -> Option<(Vec<String>, Vec<ExecutionModel>)> {
+    ) -> Option<(usize, Vec<String>, Vec<ExecutionModel>)> {
         // e.g. input variables: ["stock_name", "rec", "stock_price"]
         // binary search on CNT (number of input keys) (lo = 0, hi = 3)
         // v_in["stock_name"]: bool, v_in["rec"]: bool, v_in["stock_price"]: bool
         // c_in[s] = if v_in[s] then 1 else 0.
         // add constraint \sum_{s} c_in[s] <= CNT
-        todo!()
+
+        // binary search
+        let mut left = 0;
+        let mut right = self.node_asts[self.graph.start.unwrap()].input_keys.len();
+        let mut cur_res = None;
+        while left < right {
+            let mid = (left + right) - 1;
+            if let Some(res) = self.try_minimum_input_set(target_node, mid) {
+                right = mid;
+                cur_res = Some((mid, res.0, res.1));
+            } else {
+                left = mid + 1;
+            }
+        }
+        cur_res
     }
 
     /// Check whether we can start from the start node and can eventually reach any of the target_node in all scenarios.
