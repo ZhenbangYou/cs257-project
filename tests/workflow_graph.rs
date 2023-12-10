@@ -134,6 +134,10 @@ fn test_reachable() {
     for i in 0..graph.nodes.len() {
         let ctx = Context::new(&Config::default());
         let graph_verifier = GraphVerifier::new(&graph, &ctx);
-        println!("{}: {:?}", i, graph_verifier.is_reachable(i));
+        println!(
+            "{}: {:?}",
+            &graph.get_node(i).name,
+            graph_verifier.is_reachable(i)
+        );
     }
 }

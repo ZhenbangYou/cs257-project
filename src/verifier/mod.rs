@@ -82,7 +82,8 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
                 .transition_constraints
                 .iter()
                 .enumerate()
-                .for_each(|(child_id, bool)| {
+                .for_each(|(child_idx, bool)| {
+                    let child_id = self.graph.adj_list[node_ast.node.id][child_idx].0;
                     // edge direction: node_ast.node.id -> child_id
                     in_out_transition_constraints
                         .get_mut(&child_id)
@@ -142,7 +143,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
 
         let res = solver.check();
 
-        println!("{:?}", solver.get_model());
+        // println!("{:?}", solver.get_model());
 
         match res {
             SatResult::Sat => Some(vec![]),
