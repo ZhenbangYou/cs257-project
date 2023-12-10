@@ -175,3 +175,14 @@ fn test_reachable() {
         println!();
     }
 }
+
+#[test]
+fn test_can_eventually_reach() {
+    let graph = make_graph();
+    for i in 0..graph.nodes.len() {
+        let ctx = Context::new(&Config::default());
+        let graph_verifier = GraphVerifier::new(&graph, &ctx);
+        let result = graph_verifier.can_eventually_reach(&[i]);
+        println!("{}", result);
+    }
+}
