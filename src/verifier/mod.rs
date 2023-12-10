@@ -1,4 +1,4 @@
-use std::collections::{hash_map::RandomState, HashMap};
+use std::collections::{hash_map::RandomState, HashMap, HashSet, VecDeque};
 
 use z3::{ast::Bool, Context, Model, SatResult, Solver};
 
@@ -110,6 +110,67 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         HashMap::from_iter(constraint_bools_iter)
     }
 
+    /// result[i] contains all children j of i s.t. the transition from i to j is true
+    fn build_graph_from_model(&self, model: &Model<'ctx>) -> Vec<Vec<NodeIdx>> {
+        self.node_asts
+            .iter()
+            .map(|node_ast| {
+                node_ast
+                    .transition_constraints
+                    .iter()
+                    .enumerate()
+                    .map(|(child_idx, bool)| {
+                        (
+                            self.graph.adj_list[node_ast.node.id][child_idx].0,
+                            model.eval(bool, true).unwrap().as_bool().unwrap(),
+                        )
+                    })
+                    .filter(|(_, bool)| *bool)
+                    .map(|(child_id, _)| child_id)
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn find_path_by_bfs(
+        &self,
+        graph: &Vec<Vec<NodeIdx>>,
+        target_node: NodeIdx,
+    ) -> Option<Vec<NodeIdx>> {
+        let mut visited = HashSet::new();
+        let mut predecessor = HashMap::new();
+        let mut queue = VecDeque::new();
+
+        let start_node = self.graph.start.unwrap();
+        queue.push_back(start_node);
+        visited.insert(start_node);
+        while let Some(front) = queue.pop_front() {
+            if front == target_node {
+                break;
+            }
+            graph[front].iter().for_each(|id| {
+                if !visited.contains(id) {
+                    visited.insert(*id);
+                    predecessor.insert(*id, front);
+                    queue.push_back(*id);
+                }
+            })
+        }
+        if visited.contains(&target_node) {
+            let mut path = vec![];
+            let mut cur = target_node;
+            path.push(cur);
+            while cur != start_node {
+                cur = predecessor.remove(&cur).unwrap();
+                path.push(cur);
+            }
+            path.reverse();
+            Some(path)
+        } else {
+            None
+        }
+    }
+
     pub fn is_reachable(&self, target_node: NodeIdx) -> Option<(Vec<ExecutionModel>, Model)> {
         let solver = Solver::new(&self.context);
 
@@ -143,10 +204,20 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
 
         let res = solver.check();
 
-        // println!("{:?}", solver.get_model());
-
         match res {
-            SatResult::Sat => Some((vec![], solver.get_model().unwrap())),
+            SatResult::Sat => {
+                let model = solver.get_model().unwrap();
+                let reachable_graph = self.build_graph_from_model(&model);
+                let execution_path_by_idx = self
+                    .find_path_by_bfs(&reachable_graph, target_node)
+                    .unwrap();
+                let execution_path_by_name = execution_path_by_idx
+                    .iter()
+                    .map(|idx| &self.graph.nodes[*idx].name)
+                    .collect::<Vec<_>>();
+                println!("Execution path: {:?}", execution_path_by_name);
+                Some((vec![], model))
+            }
             _ => None,
         }
     }
