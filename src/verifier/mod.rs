@@ -240,7 +240,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         Int::add(self.context, &input_as_int.iter().collect::<Vec<_>>())
     }
 
-    fn try_minimum_input_set(
+    fn try_minimum_input_set_for_reachable(
         &self,
         target_node: NodeIdx,
         input_set_size: usize,
@@ -298,7 +298,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
     }
 
     /// Minimum user provided input to make `target_node` reachable.
-    pub fn minimum_input_set(
+    pub fn minimum_input_set_for_reachable(
         &self,
         target_node: NodeIdx,
     ) -> Option<(Vec<String>, Vec<ExecutionModel>)> {
@@ -314,7 +314,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         let mut cur_res = None;
         while left < right {
             let mid = (left + right) - 1;
-            if let Some(res) = self.try_minimum_input_set(target_node, mid) {
+            if let Some(res) = self.try_minimum_input_set_for_reachable(target_node, mid) {
                 right = mid;
                 cur_res = Some(res);
             } else {
@@ -378,5 +378,86 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         }
     }
 
-    // TODO: minimum_input_set_to_eventually_reach
+    fn try_minimum_input_set_for_can_eventually_reach(
+        &self,
+        target_nodes: &[NodeIdx],
+        input_set_size: usize,
+    ) -> bool {
+        let mut conjunctive_clauses = vec![];
+
+        // enforce all schema constraints
+        self.node_asts.iter().for_each(|node_ast| {
+            conjunctive_clauses.push(Self::aggregate_schema_constraints(node_ast, self.context));
+        });
+
+        // enforce all transition constraints
+        let mut node_idx_to_transition_constraints = self.get_in_out_transition_constraints();
+        target_nodes.iter().for_each(|target_node| {
+            node_idx_to_transition_constraints
+                .get_mut(target_node)
+                .unwrap()
+                .1 = Bool::from_bool(self.context, true); // clear the outgoing constraint for target node
+        });
+        node_idx_to_transition_constraints
+            .get_mut(&self.graph.start.unwrap())
+            .unwrap()
+            .0 = Bool::from_bool(self.context, true);
+        let mut transition_constraits_bools = node_idx_to_transition_constraints
+            .iter()
+            .map(|(_, (incoming, outgoing))| incoming.implies(outgoing))
+            .collect::<Vec<_>>();
+        conjunctive_clauses.append(&mut transition_constraits_bools);
+
+        let reach_target = target_nodes
+            .iter()
+            .map(|target_node| {
+                &node_idx_to_transition_constraints
+                    .get(target_node)
+                    .unwrap()
+                    .0
+            })
+            .collect::<Vec<_>>();
+        conjunctive_clauses.push(Bool::or(self.context, &reach_target));
+
+        let solver = Solver::new(&self.context);
+        solver.assert(
+            &Bool::and(
+                self.context,
+                &conjunctive_clauses.iter().collect::<Vec<_>>(),
+            )
+            .not(),
+        );
+
+        // enforce input set size
+        solver.assert(&self.count_input_set()._eq(&Int::from_i64(
+            self.context,
+            input_set_size.try_into().unwrap(),
+        )));
+
+        match solver.check() {
+            SatResult::Sat => false,
+            SatResult::Unsat => true,
+            SatResult::Unknown => panic!("unknown!"),
+        }
+    }
+
+    pub fn minimum_input_set_for_can_eventually_reach(
+        &self,
+        target_nodes: &[NodeIdx],
+    ) -> Option<usize> {
+        // binary search
+        let mut left = 0;
+        let mut right = self.node_asts[self.graph.start.unwrap()].input_keys.len();
+        let mut cur_res = None;
+        while left < right {
+            let mid = (left + right) - 1;
+            if self.try_minimum_input_set_for_can_eventually_reach(target_nodes, mid) {
+                right = mid;
+                cur_res = Some(mid);
+            } else {
+                left = mid + 1;
+            }
+        }
+        cur_res
+    }
 }

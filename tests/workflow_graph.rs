@@ -188,12 +188,23 @@ fn test_can_eventually_reach() {
 }
 
 #[test]
-fn test_minimum_input_set() {
+fn test_minimum_input_set_for_reachable() {
     let graph = make_graph();
     for i in 0..graph.nodes.len() {
         let ctx = Context::new(&Config::default());
         let graph_verifier = GraphVerifier::new(&graph, &ctx);
-        let result = graph_verifier.minimum_input_set(i);
+        let result = graph_verifier.minimum_input_set_for_reachable(i);
+        println!("{:?}", result);
+    }
+}
+
+#[test]
+fn test_minimum_input_set_for_can_eventually_reach() {
+    let graph = make_graph();
+    for i in 0..graph.nodes.len() {
+        let ctx = Context::new(&Config::default());
+        let graph_verifier = GraphVerifier::new(&graph, &ctx);
+        let result = graph_verifier.minimum_input_set_for_can_eventually_reach(&[i]);
         println!("{:?}", result);
     }
 }
