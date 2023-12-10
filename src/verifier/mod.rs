@@ -301,7 +301,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
     pub fn minimum_input_set(
         &self,
         target_node: NodeIdx,
-    ) -> Option<(usize, Vec<String>, Vec<ExecutionModel>)> {
+    ) -> Option<(Vec<String>, Vec<ExecutionModel>)> {
         // e.g. input variables: ["stock_name", "rec", "stock_price"]
         // binary search on CNT (number of input keys) (lo = 0, hi = 3)
         // v_in["stock_name"]: bool, v_in["rec"]: bool, v_in["stock_price"]: bool
@@ -316,7 +316,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
             let mid = (left + right) - 1;
             if let Some(res) = self.try_minimum_input_set(target_node, mid) {
                 right = mid;
-                cur_res = Some((mid, res.0, res.1));
+                cur_res = Some(res);
             } else {
                 left = mid + 1;
             }
