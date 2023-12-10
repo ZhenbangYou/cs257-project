@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use z3::ast::Ast;
+use z3::Model;
 use z3::{ast::Bool, Context};
 
 use crate::workflow::{Node, WorkflowGraph};
@@ -159,5 +160,24 @@ impl<'ctx, 'g> NodeAST<'ctx, 'g> {
             transition_constraints,
             schema_constraints,
         }
+    }
+
+    fn eval_keys(map: HashMap<&str, Bool<'ctx>>, model: &Model) -> HashMap<String, bool> {
+        map.iter()
+            .map(|(s, b)| {
+                (
+                    s.to_string(),
+                    model.eval(b, true).unwrap().as_bool().unwrap(),
+                )
+            })
+            .collect()
+    }
+
+    pub fn eval_input_keys(&self, model: &Model) -> HashMap<String, bool> {
+        Self::eval_keys(self.input_keys.clone(), model)
+    }
+
+    pub fn eval_output_keys(&self, model: &Model) -> HashMap<String, bool> {
+        Self::eval_keys(self.output_keys.clone(), model)
     }
 }

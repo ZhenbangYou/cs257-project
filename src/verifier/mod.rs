@@ -1,6 +1,6 @@
 use std::collections::{hash_map::RandomState, HashMap};
 
-use z3::{ast::Bool, Context, SatResult, Solver};
+use z3::{ast::Bool, Context, Model, SatResult, Solver};
 
 use crate::workflow::{Node, NodeIdx, WorkflowGraph};
 
@@ -110,7 +110,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         HashMap::from_iter(constraint_bools_iter)
     }
 
-    pub fn is_reachable(&self, target_node: NodeIdx) -> Option<Vec<ExecutionModel>> {
+    pub fn is_reachable(&self, target_node: NodeIdx) -> Option<(Vec<ExecutionModel>, Model)> {
         let solver = Solver::new(&self.context);
 
         // enforce all schema constraints
@@ -146,7 +146,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         // println!("{:?}", solver.get_model());
 
         match res {
-            SatResult::Sat => Some(vec![]),
+            SatResult::Sat => Some((vec![], solver.get_model().unwrap())),
             _ => None,
         }
     }

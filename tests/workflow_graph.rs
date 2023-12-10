@@ -59,6 +59,7 @@ fn make_graph() -> WorkflowGraph {
             "previous_input.stock_name".to_string(),
             "previous_input.rec".to_string(),
             "quantity".to_string(),
+            "non-existent".to_string(),
         ],
         OutputSchema::new().carry_all().build(),
     );
@@ -134,10 +135,43 @@ fn test_reachable() {
     for i in 0..graph.nodes.len() {
         let ctx = Context::new(&Config::default());
         let graph_verifier = GraphVerifier::new(&graph, &ctx);
+        let result = graph_verifier.is_reachable(i);
         println!(
             "{}: {:?}",
             &graph.get_node(i).name,
-            graph_verifier.is_reachable(i)
+            if result.is_some() {
+                "reachable"
+            } else {
+                "not reachable"
+            }
         );
+        if let Some((_, model)) = result {
+            println!("Model:");
+            for j in 0..graph.nodes.len() {
+                println!(
+                    "model required input: {:?}",
+                    graph.get_node(j).required_inputs
+                );
+                println!(
+                    "model input variables: {:?}",
+                    graph_verifier
+                        .node_asts
+                        .get(j)
+                        .unwrap()
+                        .eval_input_keys(&model)
+                );
+                println!(
+                    "model output variables: {:?}",
+                    graph_verifier
+                        .node_asts
+                        .get(j)
+                        .unwrap()
+                        .eval_output_keys(&model)
+                );
+                println!();
+            }
+        }
+
+        println!();
     }
 }
