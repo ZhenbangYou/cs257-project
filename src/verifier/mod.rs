@@ -218,7 +218,8 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
                 println!("Execution path: {:?}", execution_path_by_name);
                 Some((vec![], model))
             }
-            _ => None,
+            SatResult::Unsat => None,
+            SatResult::Unknown => panic!("unknown!"),
         }
     }
 
@@ -237,11 +238,11 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
 
     /// Check whether we can start from the start node and can eventually reach any of the target_node in all scenarios.
     pub fn can_eventually_reach(&self, target_nodes: &[NodeIdx]) -> bool {
-        let solver = Solver::new(&self.context);
+        let mut conjunctive_clauses = vec![];
 
         // enforce all schema constraints
         self.node_asts.iter().for_each(|node_ast| {
-            solver.assert(&Self::aggregate_schema_constraints(node_ast, self.context))
+            conjunctive_clauses.push(Self::aggregate_schema_constraints(node_ast, self.context));
         });
 
         // enforce all transition constraints
@@ -256,26 +257,36 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
             .get_mut(&self.graph.start.unwrap())
             .unwrap()
             .0 = Bool::from_bool(self.context, true);
-        let transition_constraits_bools = node_idx_to_transition_constraints
+        let mut transition_constraits_bools = node_idx_to_transition_constraints
             .iter()
             .map(|(_, (incoming, outgoing))| incoming.implies(outgoing))
             .collect::<Vec<_>>();
-        let transition_constraits_bools = transition_constraits_bools.iter().collect::<Vec<_>>();
-        solver.assert(&Bool::and(self.context, &transition_constraits_bools));
-        target_nodes.iter().for_each(|target_node| {
-            solver.assert(
+        conjunctive_clauses.append(&mut transition_constraits_bools);
+
+        let reach_target = target_nodes
+            .iter()
+            .map(|target_node| {
                 &node_idx_to_transition_constraints
                     .get(target_node)
                     .unwrap()
-                    .0 // incoming
-                    .not(),
-            );
-        });
+                    .0
+            })
+            .collect::<Vec<_>>();
+        conjunctive_clauses.push(Bool::or(self.context, &reach_target));
+
+        let solver = Solver::new(&self.context);
+        solver.assert(
+            &Bool::and(
+                self.context,
+                &conjunctive_clauses.iter().collect::<Vec<_>>(),
+            )
+            .not(),
+        );
 
         match solver.check() {
             SatResult::Sat => false,
-            SatResult::Unknown => panic!("unknown!"),
             SatResult::Unsat => true,
+            SatResult::Unknown => panic!("unknown!"),
         }
     }
 
