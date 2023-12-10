@@ -282,7 +282,16 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
         );
 
         match solver.check() {
-            SatResult::Sat => Some((vec![], vec![])),
+            SatResult::Sat => {
+                let model = solver.get_model().unwrap();
+                let min_input_keys = self.node_asts[self.graph.start.unwrap()]
+                    .input_keys
+                    .iter()
+                    .filter(|(_, v)| model.eval(*v, true).unwrap().as_bool().unwrap())
+                    .map(|(&k, _)| String::from(k))
+                    .collect();
+                Some((min_input_keys, vec![]))
+            }
             SatResult::Unsat => None,
             SatResult::Unknown => panic!("unknown!"),
         }
