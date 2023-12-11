@@ -176,7 +176,14 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
 
     pub fn is_reachable(&self, target_node: NodeIdx) -> Option<(Vec<ExecutionModel>, Model)> {
         let solver = Solver::new(&self.context);
+        self.is_reachable_with_solver(target_node, &solver)
+    }
 
+    pub fn is_reachable_with_solver(
+        &self,
+        target_node: NodeIdx,
+        solver: &Solver<'ctx>,
+    ) -> Option<(Vec<ExecutionModel>, Model)> {
         // enforce all schema constraints
         self.node_asts.iter().for_each(|node_ast| {
             solver.assert(&Self::aggregate_schema_constraints(node_ast, self.context))
@@ -218,7 +225,7 @@ impl<'ctx, 'g> GraphVerifier<'ctx, 'g> {
                     .iter()
                     .map(|idx| &self.graph.nodes[*idx].name)
                     .collect::<Vec<_>>();
-                println!("Execution path: {:?}", execution_path_by_name);
+                // println!("Execution path: {:?}", execution_path_by_name);
                 Some((vec![], model))
             }
             SatResult::Unsat => None,

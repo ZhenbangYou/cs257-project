@@ -8,3 +8,10 @@ edition = "2021"
 [dependencies]
 z3 = "0.12"
 lazy_static = "1.4"
+
+[dev-dependencies]
+criterion = "0.4"
+
+[[bench]]
+name = "bench"
+harness = false
