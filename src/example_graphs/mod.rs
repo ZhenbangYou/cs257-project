@@ -1,5 +1,5 @@
 pub mod buy_sell_stock;
-
+pub mod linear;
 use crate::workflow::{NodeIdx, WorkflowGraph};
 
 pub struct WorkflowGraphExt {
@@ -17,7 +17,7 @@ impl WorkflowGraphExt {
 }
 
 pub trait MakeGraph {
-    const NAME: &'static str;
+    fn name(&self) -> String;
 
     fn make_graph(&self) -> WorkflowGraphExt;
 }

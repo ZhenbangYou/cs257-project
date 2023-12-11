@@ -6,7 +6,7 @@ pub mod schema;
 
 pub type NodeIdx = usize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     pub id: NodeIdx,
     pub name: String,
@@ -30,7 +30,7 @@ impl Node {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WorkflowGraph {
     pub nodes: Vec<Node>,
     pub adj_list: Vec<Vec<(NodeIdx, Vec<InputCond>)>>,

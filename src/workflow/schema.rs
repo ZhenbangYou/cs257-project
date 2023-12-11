@@ -14,7 +14,7 @@ pub enum InputCond {
     MatchesKeyValue(String, String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OutputSchema {
     pub fixed_keys: Vec<String>,
     pub dynamic_keys: Vec<(KeyRule, InputCond)>,

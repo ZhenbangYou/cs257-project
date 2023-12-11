@@ -5,11 +5,11 @@ use crate::workflow::{
 
 use super::{MakeGraph, WorkflowGraphExt};
 
-pub struct BuySellStock {
+pub struct BuySellStockGraph {
     include_non_existent: bool,
 }
 
-impl BuySellStock {
+impl BuySellStockGraph {
     pub fn new(include_non_existent: bool) -> Self {
         Self {
             include_non_existent,
@@ -17,8 +17,10 @@ impl BuySellStock {
     }
 }
 
-impl MakeGraph for BuySellStock {
-    const NAME: &'static str = "buy_sell_stock";
+impl MakeGraph for BuySellStockGraph {
+    fn name(&self) -> String {
+        format!("buy_sell_stock_{}", self.include_non_existent)
+    }
 
     fn make_graph(&self) -> WorkflowGraphExt {
         let mut g = WorkflowGraph::new();
