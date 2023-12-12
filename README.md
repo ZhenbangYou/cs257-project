@@ -24,3 +24,10 @@ cargo test
 ```
 cargo bench
 ```
+
+### Remarks
+
+The values constraints for transition are not included in this prototype, but they can be added without major challenges. To add value constraints, further development could just
+- Add variables for value corresponding to each relevant keys for each node.
+- Enforce equality constraints where values from previous output is the same as values of current input.
+- Add value constraints to transition constraints. 
